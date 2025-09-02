@@ -1,10 +1,11 @@
-import type { DynamicTool } from "@langchain/core/tools";
+import type { DynamicStructuredTool, DynamicTool } from "@langchain/core/tools";
 import { ChatGroq } from "@langchain/groq";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { END, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
-import { HumanMessage, type AIMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, type AIMessage } from "@langchain/core/messages";
+import { getEventsTool } from "./tools";
 
-const tools: DynamicTool<any>[] = [];
+const tools = [getEventsTool];
 
 const model = new ChatGroq({
     model: "openai/gpt-oss-120b",
@@ -43,8 +44,17 @@ const workflow = new StateGraph(MessagesAnnotation)
 
 const app = workflow.compile();
 
+const currentDateTime = new Date().toLocaleString('sv-SE').replace(' ', 'T');
+const timeZoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 const finalState = await app.invoke({
-    messages: [new HumanMessage("Hi there! How are you doing?")],
+    messages: [
+        new SystemMessage(`You are a helpful calendar assistant.
+            You can help the user schedule meetings, add events to their calendar,
+            and provide information about their upcoming events.
+            The current date and time is ${currentDateTime} in the timezone ${timeZoneString}.`),
+        new HumanMessage("Hi there! Do I have any meeting today?"),
+    ],
 },
 );
 
