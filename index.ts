@@ -1,7 +1,8 @@
+import readline from 'node:readline/promises';
 import type { DynamicStructuredTool, DynamicTool } from "@langchain/core/tools";
 import { ChatGroq } from "@langchain/groq";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { END, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import { END, MemorySaver, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { HumanMessage, SystemMessage, type AIMessage } from "@langchain/core/messages";
 import { createEventTool, getEventsTool } from "./tools";
 
@@ -13,7 +14,6 @@ const model = new ChatGroq({
 }).bindTools(tools);
 
 const toolNode = new ToolNode(tools);
-
 async function callModel(state: typeof MessagesAnnotation.State) {
     const response = await model.invoke(state.messages);
 
@@ -41,21 +41,41 @@ const workflow = new StateGraph(MessagesAnnotation)
         __end__: END,
     });
 
+const checkpointer = new MemorySaver();
 
-const app = workflow.compile();
+const app = workflow.compile({ checkpointer });
 
-const currentDateTime = new Date().toLocaleString('sv-SE').replace(' ', 'T');
-const timeZoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
+async function main() {
 
-const finalState = await app.invoke({
-    messages: [
-        new SystemMessage(`You are a helpful calendar assistant.
-            You can help the user schedule meetings, add events to their calendar,
-            and provide information about their upcoming events.
-            The current date and time is ${currentDateTime} in the timezone ${timeZoneString}.`),
-        new HumanMessage("Hi there! Whats on my google calendar for today ?"),
-    ],
-},
-);
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    let config = { configurable: { thread_id: '1' } };
 
-console.log(`Assistant:${finalState.messages[finalState.messages.length - 1]?.content}`);
+    while (true) {
+        const userInput = await rl.question('User: ');
+        if (userInput.toLowerCase() === 'bye' || userInput.toLowerCase() === 'exit') {
+            break;
+        }
+
+        const currentDateTime = new Date().toLocaleString('sv-SE').replace(' ', 'T');
+        const timeZoneString = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        const finalState = await app.invoke({
+            messages: [
+                new SystemMessage(`You are Meetly, a helpful calendar assistant.
+                    You can help the user schedule meetings, add events to their calendar,
+                    and provide information about their upcoming events.
+                    If required, you can ask the user for more information.
+                    The current date and time is ${currentDateTime} in the timezone ${timeZoneString}.`),
+                new HumanMessage(userInput),
+            ],
+        },
+            config
+        );
+
+        console.log(`Meetly:${finalState.messages[finalState.messages.length - 1]?.content}`);
+
+    }
+    rl.close();
+}
+
+main();

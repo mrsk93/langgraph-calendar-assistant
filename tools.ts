@@ -19,13 +19,26 @@ const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
 export const getEventsTool = tool(async ({ q, timeMin, timeMax }: { q: string, timeMin: string, timeMax: string }) => {
     try {
+        console.log('Fetching events from Google Calendar...');
         const res = await calendar.events.list({
             calendarId: 'primary',
             q,
             timeMin: new Date(timeMin).toISOString(),
             timeMax: new Date(timeMax).toISOString(),
         });
-        const events = res.data.items;
+        const events = res.data.items?.map((event) => {
+            return {
+                id: event.id,
+                summary: event.summary,
+                status: event.status,
+                organizer: event.organizer,
+                start: event.start,
+                end: event.end,
+                attendees: event.attendees,
+                meetingLink: event.hangoutLink,
+                eventType: event.eventType,
+            };
+        });;
         return JSON.stringify(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -49,8 +62,9 @@ export const createEventTool = tool(async ({ summary, start, end, attendees }: {
     attendees: { email: string, displayName: string }[]
 }) => {
     try {
+        console.log('Creating event in Google Calendar...');
         const response = await calendar.events.insert({
-            calendarId: 'kumar.sumit9981@gmail.com',
+            calendarId: 'primary',
             sendUpdates: 'all',
             conferenceDataVersion: 1,
             requestBody: {

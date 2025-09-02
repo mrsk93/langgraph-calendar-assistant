@@ -16,9 +16,11 @@ app.get('/auth', (req, res) => {
     const url = oauth2Client.generateAuthUrl({
         // 'online' (default) or 'offline' (gets refresh_token)
         access_type: 'offline',
-        prompt: 'consent',
-        // If you only need one scope, you can pass it as a string
-        scope: scopes,
+        prompt: 'consent',  // for prompt = 'consent', access_type = 'offline' is required,
+        // this provides a refresh token along with the access token
+
+        scope: scopes, // If you only need one scope, you can pass it as a string
+
     });
 
     console.log('url', url);
