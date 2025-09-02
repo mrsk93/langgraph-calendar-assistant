@@ -3,9 +3,9 @@ import { ChatGroq } from "@langchain/groq";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { END, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { HumanMessage, SystemMessage, type AIMessage } from "@langchain/core/messages";
-import { getEventsTool } from "./tools";
+import { createEventTool, getEventsTool } from "./tools";
 
-const tools = [getEventsTool];
+const tools: Array<DynamicTool | DynamicStructuredTool> = [getEventsTool, createEventTool];
 
 const model = new ChatGroq({
     model: "openai/gpt-oss-120b",
@@ -53,7 +53,7 @@ const finalState = await app.invoke({
             You can help the user schedule meetings, add events to their calendar,
             and provide information about their upcoming events.
             The current date and time is ${currentDateTime} in the timezone ${timeZoneString}.`),
-        new HumanMessage("Hi there! Do I have any meeting today?"),
+        new HumanMessage("Hi there! Whats on my google calendar for today ?"),
     ],
 },
 );

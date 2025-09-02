@@ -17,7 +17,7 @@ oauth2Client.setCredentials({
 
 const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-export const getEventsTool = tool(async ({q, timeMin, timeMax}: {q: string, timeMin: string, timeMax: string}) => {
+export const getEventsTool = tool(async ({ q, timeMin, timeMax }: { q: string, timeMin: string, timeMax: string }) => {
     try {
         const res = await calendar.events.list({
             calendarId: 'primary',
@@ -36,7 +36,76 @@ export const getEventsTool = tool(async ({q, timeMin, timeMax}: {q: string, time
     description: 'Get a list of user meetings in google Calendar',
     schema: z.object({
         q: z.string().optional().describe("The title or description of the event to search for"),
-        timeMin: z.string().optional().describe("The start time in ISO format"),
-        timeMax: z.string().optional().describe("The end time in ISO format"),
+        timeMin: z.string().describe("The start time in ISO format"),
+        timeMax: z.string().describe("The end time in ISO format"),
     })
-})
+});
+
+
+export const createEventTool = tool(async ({ summary, start, end, attendees }: {
+    summary: string,
+    start: { dateTime: string, timeZone: string },
+    end: { dateTime: string, timeZone: string },
+    attendees: { email: string, displayName: string }[]
+}) => {
+    try {
+        const response = await calendar.events.insert({
+            calendarId: 'kumar.sumit9981@gmail.com',
+            sendUpdates: 'all',
+            conferenceDataVersion: 1,
+            requestBody: {
+                summary,
+                start: {
+                    dateTime: start.dateTime,
+                    timeZone: start.timeZone,
+                },
+                end: {
+                    dateTime: end.dateTime,
+                    timeZone: end.timeZone,
+                },
+                attendees: attendees.map(attendee => ({
+                    email: attendee.email,
+                    displayName: attendee.displayName,
+                })),
+                conferenceData: {
+                    createRequest: {
+                        requestId: crypto.randomUUID(),
+                        conferenceSolutionKey: {
+                            type: 'hangoutsMeet',
+                        },
+                    },
+                },
+            },
+        });
+
+        if (response.statusText === 'OK') {
+            return 'The meeting has been created.';
+        }
+
+        return "Couldn't create a meeting.";
+    } catch (error) {
+        return "Couldn't create a meeting.";
+    }
+},
+    {
+        name: 'createGoogleCalendarEvents',
+        description: 'Create a meeting in google Calendar',
+        schema: z.object({
+            summary: z.string().describe('The title of the event'),
+            start: z.object({
+                dateTime: z.string().describe('The date time of start of the event.'),
+                timeZone: z.string().describe('Current IANA timezone string.'),
+            }),
+            end: z.object({
+                dateTime: z.string().describe('The date time of end of the event.'),
+                timeZone: z.string().describe('Current IANA timezone string.'),
+            }),
+            attendees: z.array(
+                z.object({
+                    email: z.string().describe('The email of the attendee'),
+                    displayName: z.string().describe('Then name of the attendee.'),
+                })
+            ),
+        }),
+    }
+);
