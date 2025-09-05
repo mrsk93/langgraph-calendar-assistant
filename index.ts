@@ -5,6 +5,7 @@ import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { END, MemorySaver, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { HumanMessage, SystemMessage, type AIMessage } from "@langchain/core/messages";
 import { createEventTool, getEventsTool } from "./tools";
+import CallbackHandler from 'langfuse-langchain';
 
 const tools: Array<DynamicTool | DynamicStructuredTool> = [getEventsTool, createEventTool];
 
@@ -43,12 +44,22 @@ const workflow = new StateGraph(MessagesAnnotation)
 
 const checkpointer = new MemorySaver();
 
+const langfuseHandler = new CallbackHandler({
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    baseUrl: process.env.LANGFUSE_BASE_URL,
+});
+
 const app = workflow.compile({ checkpointer });
 
 async function main() {
 
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    let config = { configurable: { thread_id: '1' } };
+    let config = {
+        configurable: { thread_id: '1' },
+        callbacks: [langfuseHandler],
+        metadata: { langfuseSessionId: "1" }
+    };
 
     while (true) {
         const userInput = await rl.question('User: ');
