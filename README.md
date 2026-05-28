@@ -1,5 +1,7 @@
 # langgraph-calendar-assistant
 
+LangGraph / GPT-OSS-120B based (Calendar Assistant CLI) AI Agent
+
 To install dependencies:
 
 ```bash
